@@ -14,12 +14,33 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(AppState {
             tracer: std::sync::Mutex::new(Box::new(VtracerBackend)),
             backend_statuses: std::sync::Mutex::new(installer::default_backend_statuses()),
         })
         .setup(|app| {
             use tauri::menu::{MenuBuilder, SubmenuBuilder};
+            use tauri::Manager;
+
+            // Replace defaults with real filesystem state so the UI reflects
+            // any previously installed environment on first open.
+            *app.state::<AppState>().backend_statuses.lock().unwrap() =
+                installer::probe_backend_statuses(app.handle());
+
+            // Apply window chrome settings that are unreliable via tauri.conf.json
+            // when the CLI uses pre-built platform binaries.
+            let win = app.get_webview_window("main").expect("no main window");
+            #[cfg(target_os = "macos")]
+            {
+                win.set_title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .expect("failed to set title bar style");
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                win.set_decorations(false)
+                    .expect("failed to remove decorations");
+            }
 
             let h = app.handle().clone();
 

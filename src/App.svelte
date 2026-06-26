@@ -5,6 +5,7 @@
   import Controls from "./lib/components/Controls.svelte";
   import Settings from "./lib/components/settings/Settings.svelte";
   import SplashScreen from "./lib/components/SplashScreen.svelte";
+  import Titlebar from "./lib/components/Titlebar.svelte";
   import Toolbar from "./lib/components/Toolbar.svelte";
 
   let showSettings = false;
@@ -18,6 +19,7 @@
 </script>
 
 <div class="app">
+  <Titlebar />
   <Toolbar onOpenSettings={() => (showSettings = true)} />
   <main class="workspace">
     <Canvas />
@@ -78,6 +80,7 @@
 
   .workspace {
     display: flex;
+    flex-direction: column;
     flex: 1;
     overflow: hidden;
   }
