@@ -36,6 +36,30 @@
 {/if}
 
 <style>
+  @font-face {
+    font-family: 'Elms Sans';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('/fonts/elms-sans-latin.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'Elms Sans';
+    font-style: italic;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('/fonts/elms-sans-latin-italic.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'Quicksand';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('/fonts/quicksand-latin.woff2') format('woff2');
+  }
+
   :global(*) {
     box-sizing: border-box;
     margin: 0;
@@ -43,6 +67,8 @@
   }
 
   :global(:root) {
+    --font-body: 'Quicksand', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-heading: 'Elms Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     --bg-1: #111113;
     --bg-2: #18181b;
     --bg-3: #222226;
@@ -61,9 +87,13 @@
   :global(body) {
     background: var(--bg-1);
     color: var(--text-1);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-family: var(--font-body);
     height: 100vh;
     overflow: hidden;
+  }
+
+  :global(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--font-heading);
   }
 
   :global(#app) {
