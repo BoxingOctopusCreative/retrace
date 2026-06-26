@@ -38,6 +38,14 @@ jobs:
             librsvg2-dev \
             patchelf
 
+      - name: Download uv sidecar
+        run: |
+          TRIPLE=$(rustc -vV | grep host | awk '{print $2}')
+          curl -fsSL "https://github.com/astral-sh/uv/releases/latest/download/uv-${TRIPLE}.tar.gz" \
+            | tar -xz -C /tmp
+          cp "/tmp/uv-${TRIPLE}/uv" "src-tauri/binaries/uv-${TRIPLE}"
+          chmod +x "src-tauri/binaries/uv-${TRIPLE}"
+
       - name: Rust tests
         run: cargo test
         working-directory: src-tauri
@@ -78,6 +86,26 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf
+
+      - name: Download uv sidecar (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          TRIPLE=$(rustc -vV | grep host | awk '{print $2}')
+          curl -fsSL "https://github.com/astral-sh/uv/releases/latest/download/uv-${TRIPLE}.tar.gz" \
+            | tar -xz -C /tmp
+          cp "/tmp/uv-${TRIPLE}/uv" "src-tauri/binaries/uv-${TRIPLE}"
+          chmod +x "src-tauri/binaries/uv-${TRIPLE}"
+
+      - name: Download uv sidecar (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $triple = (rustc -vV | Select-String 'host').ToString().Split()[1]
+          $tmp = "$env:TEMP\uv"
+          Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-${triple}.zip" -OutFile "$tmp.zip"
+          Expand-Archive -Path "$tmp.zip" -DestinationPath $tmp
+          Copy-Item "$tmp\uv-${triple}\uv.exe" "src-tauri\binaries\uv-${triple}.exe"
 
       - uses: tauri-apps/tauri-action@v0
         env:
