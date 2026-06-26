@@ -52,22 +52,26 @@ fn uv_binary(app: &tauri::AppHandle) -> anyhow::Result<std::path::PathBuf> {
     let name = format!("uv-{}", target_triple());
 
     #[cfg(dev)]
-    let dir = app
-        .path()
-        .resource_dir()
-        .context("could not resolve resource directory")?;
+    let binary = {
+        let dir = app
+            .path()
+            .resource_dir()
+            .context("could not resolve resource directory")?;
+        dir.join("binaries").join(&name)
+    };
 
     #[cfg(not(dev))]
-    let dir = {
+    let binary = {
         let _ = app; // not needed outside dev
-        std::env::current_exe()
+        // In production Tauri places sidecars next to the executable,
+        // with no binaries/ subdirectory prefix.
+        let dir = std::env::current_exe()
             .context("could not get current executable path")?
             .parent()
             .context("executable has no parent directory")?
-            .to_path_buf()
+            .to_path_buf();
+        dir.join(&name)
     };
-
-    let binary = dir.join("binaries").join(&name);
     if !binary.exists() {
         anyhow::bail!("uv binary not found at {:?}", binary);
     }
