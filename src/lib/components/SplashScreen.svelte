@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { openUrl } from "@tauri-apps/plugin-opener";
 
   export let onclose: (() => void) | undefined = undefined;
 
@@ -35,7 +36,7 @@
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class="card" on:click|stopPropagation on:keydown|stopPropagation>
     <div class="hero">
-      <svg class="icon" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <svg class="icon" width="72" height="72" viewBox="0 0 48 48" fill="none" aria-hidden="true">
         <circle cx="10" cy="38" r="5" fill="var(--accent)" opacity="0.9" />
         <circle cx="38" cy="10" r="5" fill="var(--accent)" opacity="0.9" />
         <circle cx="36" cy="36" r="3.5" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.6" />
@@ -48,11 +49,16 @@
 
     <hr class="rule" />
 
-    <dl class="meta">
-      <div class="row"><dt>Version</dt><dd>0.1.0</dd></div>
-      <div class="row"><dt>Studio</dt><dd>Boxing Octopus Creative</dd></div>
-      <div class="row"><dt>License</dt><dd>MPL 2.0</dd></div>
-    </dl>
+    <div class="meta">
+      <p class="meta-line">
+        Version 0.1.0 from <!-- svelte-ignore a11y-invalid-attribute -->
+        <a href="#" class="link" on:click|preventDefault={() => openUrl("https://boxingoctop.us")}>BOC Engineering</a>
+      </p>
+      <p class="meta-line">
+        Licensed under the <!-- svelte-ignore a11y-invalid-attribute -->
+        <a href="#" class="link" on:click|preventDefault={() => openUrl("https://www.mozilla.org/en-US/MPL/2.0/")}>Mozilla Public License 2.0</a>
+      </p>
+    </div>
 
     <button class="close-btn" on:click={dismiss}>Close</button>
   </div>
@@ -78,15 +84,15 @@
   }
 
   .card {
-    background: var(--bg-2);
+    background: #000;
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 44px 48px 36px;
-    width: 360px;
+    border-radius: 16px;
+    padding: 52px 56px 44px;
+    width: 460px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9);
     transform: scale(0.96);
     transition: transform 0.2s ease;
   }
@@ -109,7 +115,8 @@
   }
 
   .wordmark {
-    font-size: 40px;
+    font-family: var(--font-heading);
+    font-size: 52px;
     font-weight: 800;
     letter-spacing: -0.04em;
     color: var(--accent);
@@ -117,7 +124,7 @@
   }
 
   .tagline {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-3);
     letter-spacing: 0.01em;
   }
@@ -133,24 +140,28 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     margin-bottom: 32px;
+    text-align: center;
   }
 
-  .row {
-    display: flex;
-    justify-content: space-between;
+  .meta-line {
     font-size: 13px;
-  }
-
-  dt {
     color: var(--text-4);
+    margin: 0;
+    line-height: 1.5;
   }
 
-  dd {
-    color: var(--text-2);
-    font-weight: 500;
-    margin: 0;
+  .link {
+    color: var(--text-3);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: color 0.1s;
+  }
+
+  .link:hover {
+    color: var(--text-1);
   }
 
   .close-btn {

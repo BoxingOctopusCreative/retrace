@@ -16,9 +16,11 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
+tokio = { version = "1", features = ["rt"] }
 vtracer = "0.6.5"
 image = "0.23"
 roxmltree = "0.21"
