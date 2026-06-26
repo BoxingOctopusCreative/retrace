@@ -15,8 +15,8 @@ describe("SplashScreen", () => {
 
   it("renders studio and license metadata", () => {
     const { getByText } = render(SplashScreen);
-    expect(getByText("Boxing Octopus Creative")).toBeTruthy();
-    expect(getByText("MPL 2.0")).toBeTruthy();
+    expect(getByText("BOC Engineering")).toBeTruthy();
+    expect(getByText("Mozilla Public License 2.0")).toBeTruthy();
   });
 
   it("renders a Close button", () => {
