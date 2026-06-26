@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from "svelte";
+  import { onMount } from "svelte";
 
-  const dispatch = createEventDispatcher<{ close: void }>();
+  export let onclose: (() => void) | undefined = undefined;
 
   let visible = false;
 
@@ -13,7 +13,7 @@
 
   function dismiss() {
     visible = false;
-    setTimeout(() => dispatch("close"), 220);
+    setTimeout(() => onclose?.(), 220);
   }
 
   function handleKey(e: KeyboardEvent) {

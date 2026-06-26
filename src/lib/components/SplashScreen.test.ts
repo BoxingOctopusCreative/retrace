@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect } from "vitest";
 import { render, fireEvent } from "@testing-library/svelte";
 import SplashScreen from "./SplashScreen.svelte";
 
@@ -31,64 +31,55 @@ describe("SplashScreen", () => {
     expect(dialog).toHaveAttribute("aria-label", "About Re:Trace");
   });
 
-  it("dispatches close event when Close button is clicked", async () => {
+  it("calls onclose after animation delay when Close button is clicked", async () => {
     vi.useFakeTimers();
-    const { getByRole, component } = render(SplashScreen);
-
-    const closeHandler = vi.fn();
-    component.$on("close", closeHandler);
+    const onclose = vi.fn();
+    const { getByRole } = render(SplashScreen, { onclose });
 
     await fireEvent.click(getByRole("button", { name: "Close" }));
 
-    // close is dispatched after a 220 ms animation delay
-    expect(closeHandler).not.toHaveBeenCalled();
+    expect(onclose).not.toHaveBeenCalled();
     vi.advanceTimersByTime(220);
-    expect(closeHandler).toHaveBeenCalledTimes(1);
+    expect(onclose).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
   });
 
-  it("dispatches close event when overlay is clicked", async () => {
+  it("calls onclose after animation delay when overlay is clicked", async () => {
     vi.useFakeTimers();
-    const { getByRole, component } = render(SplashScreen);
-
-    const closeHandler = vi.fn();
-    component.$on("close", closeHandler);
+    const onclose = vi.fn();
+    const { getByRole } = render(SplashScreen, { onclose });
 
     await fireEvent.click(getByRole("dialog"));
 
     vi.advanceTimersByTime(220);
-    expect(closeHandler).toHaveBeenCalledTimes(1);
+    expect(onclose).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
   });
 
-  it("dispatches close event on Escape key", async () => {
+  it("calls onclose after animation delay on Escape key", async () => {
     vi.useFakeTimers();
-    const { getByRole, component } = render(SplashScreen);
-
-    const closeHandler = vi.fn();
-    component.$on("close", closeHandler);
+    const onclose = vi.fn();
+    const { getByRole } = render(SplashScreen, { onclose });
 
     await fireEvent.keyDown(getByRole("dialog"), { key: "Escape" });
 
     vi.advanceTimersByTime(220);
-    expect(closeHandler).toHaveBeenCalledTimes(1);
+    expect(onclose).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
   });
 
-  it("does not dispatch close on non-Escape key", async () => {
+  it("does not call onclose on non-Escape key", async () => {
     vi.useFakeTimers();
-    const { getByRole, component } = render(SplashScreen);
-
-    const closeHandler = vi.fn();
-    component.$on("close", closeHandler);
+    const onclose = vi.fn();
+    const { getByRole } = render(SplashScreen, { onclose });
 
     await fireEvent.keyDown(getByRole("dialog"), { key: "Enter" });
 
     vi.advanceTimersByTime(500);
-    expect(closeHandler).not.toHaveBeenCalled();
+    expect(onclose).not.toHaveBeenCalled();
 
     vi.useRealTimers();
   });

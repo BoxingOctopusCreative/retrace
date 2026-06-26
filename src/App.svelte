@@ -30,7 +30,7 @@
 {/if}
 
 {#if showSplash}
-  <SplashScreen on:close={() => (showSplash = false)} />
+  <SplashScreen onclose={() => (showSplash = false)} />
 {/if}
 
 <style>

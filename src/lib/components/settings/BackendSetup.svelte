@@ -145,7 +145,7 @@
         <span class="badge-ok">Installed</span>
         <button class="btn-remove" on:click={uninstallPythonEnv}>Remove</button>
       {:else if installingEnv}
-        <progress value={pythonEnvProgress()} max="1" class="prog" />
+        <progress value={pythonEnvProgress()} max="1" class="prog"></progress>
         <span class="badge-busy">Installing…</span>
       {:else}
         <button class="btn-install" on:click={installPythonEnv}>Install</button>
@@ -164,7 +164,7 @@
         <span class="badge-ok">Ready</span>
         <button class="btn-remove" on:click={() => uninstall("live")}>Remove</button>
       {:else if isInstalling("live")}
-        <progress value={progressFor("live")} max="1" class="prog" />
+        <progress value={progressFor("live")} max="1" class="prog"></progress>
         <button class="btn-cancel" on:click={() => invoke("cancel_download", { backend: "live" })}>
           Cancel
         </button>
@@ -207,7 +207,7 @@
         <span class="badge-ok small">Installed</span>
         <button class="btn-remove" on:click={() => uninstall("starvector-1b")}>Remove</button>
       {:else if isInstalling("starvector-1b")}
-        <progress value={progressFor("starvector-1b")} max="1" class="prog" />
+        <progress value={progressFor("starvector-1b")} max="1" class="prog"></progress>
         <button
           class="btn-cancel"
           on:click={() => invoke("cancel_download", { backend: "starvector-1b" })}
@@ -231,7 +231,7 @@
         <span class="badge-ok small">Installed</span>
         <button class="btn-remove" on:click={() => uninstall("starvector-8b")}>Remove</button>
       {:else if isInstalling("starvector-8b")}
-        <progress value={progressFor("starvector-8b")} max="1" class="prog" />
+        <progress value={progressFor("starvector-8b")} max="1" class="prog"></progress>
         <button
           class="btn-cancel"
           on:click={() => invoke("cancel_download", { backend: "starvector-8b" })}
