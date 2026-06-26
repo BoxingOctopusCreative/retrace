@@ -1,5 +1,6 @@
 <script lang="ts">
   import BackendSetup from "./BackendSetup.svelte";
+  import UpdateSettings from "./UpdateSettings.svelte";
 
   export let onClose: () => void;
 </script>
@@ -10,11 +11,12 @@
     <div class="panel-header">
       <div class="header-left">
         <h1 class="panel-title">Settings</h1>
-        <span class="panel-section">Enhanced Backends</span>
       </div>
       <button class="close-btn" on:click={onClose} aria-label="Close settings">✕</button>
     </div>
     <div class="panel-body">
+      <UpdateSettings />
+      <hr class="divider" />
       <BackendSetup />
     </div>
   </div>
@@ -64,9 +66,10 @@
     margin: 0;
   }
 
-  .panel-section {
-    font-size: 12px;
-    color: var(--text-4);
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
   }
 
   .close-btn {

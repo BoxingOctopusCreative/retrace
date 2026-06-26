@@ -15,6 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState {
             tracer: std::sync::Mutex::new(Box::new(VtracerBackend)),
             backend_statuses: std::sync::Mutex::new(installer::default_backend_statuses()),
@@ -59,6 +60,7 @@ pub fn run() {
                 .item(
                     &SubmenuBuilder::new(&h, "Re:Trace")
                         .text("about", "About Re:Trace")
+                        .text("check-updates", "Check for Updates…")
                         .separator()
                         .quit()
                         .build()?,
@@ -72,6 +74,7 @@ pub fn run() {
                 .item(
                     &SubmenuBuilder::new(&h, "Help")
                         .text("about", "About Re:Trace")
+                        .text("check-updates", "Check for Updates…")
                         .build()?,
                 )
                 .build()?;
@@ -79,8 +82,10 @@ pub fn run() {
             app.set_menu(menu)?;
 
             app.on_menu_event(|app_handle, event| {
-                if event.id().as_ref() == "about" {
-                    let _ = app_handle.emit("menu:about", ());
+                match event.id().as_ref() {
+                    "about" => { let _ = app_handle.emit("menu:about", ()); }
+                    "check-updates" => { let _ = app_handle.emit("menu:check-updates", ()); }
+                    _ => {}
                 }
             });
 
@@ -100,6 +105,8 @@ pub fn run() {
             commands::setup::download_model,
             commands::setup::cancel_download,
             commands::setup::uninstall_backend,
+            commands::updater::check_for_update,
+            commands::updater::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -7,6 +7,7 @@
   import SplashScreen from "./lib/components/SplashScreen.svelte";
   import Titlebar from "./lib/components/Titlebar.svelte";
   import Toolbar from "./lib/components/Toolbar.svelte";
+  import UpdateChecker from "./lib/components/UpdateChecker.svelte";
 
   let showSettings = false;
   let showSplash = true;
@@ -34,6 +35,8 @@
 {#if showSplash}
   <SplashScreen onclose={() => (showSplash = false)} />
 {/if}
+
+<UpdateChecker />
 
 <style>
   @font-face {
