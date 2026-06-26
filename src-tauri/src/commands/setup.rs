@@ -1,7 +1,8 @@
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
-use crate::setup::{installer, system};
+use crate::setup::{installer, system, uv};
 use crate::state::{AppState, BackendId, BackendState, BackendStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,8 +25,8 @@ pub fn detect_gpu() -> system::GpuInfo {
 }
 
 #[tauri::command]
-pub fn get_disk_space(path: String) -> u64 {
-    system::get_disk_space(&path)
+pub fn get_disk_space(app: tauri::AppHandle) -> u64 {
+    system::get_disk_space(&installer::python_env_dir(&app))
 }
 
 #[tauri::command]
@@ -40,11 +41,59 @@ pub fn get_python_env_installed(app: tauri::AppHandle) -> bool {
 
 #[tauri::command]
 pub async fn install_python_env(
-    _app: tauri::AppHandle,
-    _state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    // TODO: invoke uv to create venv + install ML deps (milestone 2)
-    Err("Python environment installation not yet implemented — coming in milestone 2.".to_string())
+    let app_task = app.clone();
+    tokio::task::spawn_blocking(move || install_env_blocking(&app_task))
+        .await
+        .map_err(|e| format!("install task panicked: {e}"))?
+        .map_err(|e| e.to_string())?;
+
+    *state.backend_statuses.lock().unwrap() = installer::probe_backend_statuses(&app);
+    Ok(())
+}
+
+fn install_env_blocking(app: &tauri::AppHandle) -> anyhow::Result<()> {
+    use tauri::Manager;
+
+    let env_dir = installer::python_env_dir(app);
+    let venv_dir = env_dir.join("venv");
+    let venv_str = venv_dir
+        .to_str()
+        .context("venv path contains non-UTF-8 characters")?
+        .to_owned();
+
+    let _ = app.emit(
+        "install:progress",
+        InstallProgress {
+            stage: InstallStage::PythonEnv,
+            bytes_downloaded: 0,
+            total_bytes: 0,
+        },
+    );
+
+    // Step 1: create the isolated venv; uv downloads Python 3.11 automatically.
+    uv::run_uv_streaming(app, &["venv", &venv_str, "--python", "3.11"], |_| {})?;
+
+    // Step 2: install base ML deps from the bundled requirements file.
+    let requirements = app
+        .path()
+        .resource_dir()
+        .context("could not resolve resource directory")?
+        .join("requirements.txt");
+    let req_str = requirements
+        .to_str()
+        .context("requirements.txt path contains non-UTF-8 characters")?
+        .to_owned();
+
+    uv::run_uv_streaming(
+        app,
+        &["pip", "install", "--python", &venv_str, "-r", &req_str],
+        |_| {},
+    )?;
+
+    Ok(())
 }
 
 #[tauri::command]

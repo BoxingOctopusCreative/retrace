@@ -20,7 +20,7 @@
       invoke<GpuInfo>("detect_gpu"),
       invoke<boolean>("get_python_env_installed"),
     ]);
-    diskFreeBytes = await invoke<number>("get_disk_space", { path: "/" });
+    diskFreeBytes = await invoke<number>("get_disk_space");
     await refreshStatuses();
     loading = false;
   });

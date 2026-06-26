@@ -89,15 +89,14 @@ fn try_rocm() -> Option<GpuInfo> {
     Some(GpuInfo { name, vram_mb: None, compute_backend: Some(ComputeBackend::Rocm) })
 }
 
-pub fn get_disk_space(path: &str) -> u64 {
+pub fn get_disk_space(path: &std::path::Path) -> u64 {
     use sysinfo::Disks;
-    let check = std::path::Path::new(path);
     let disks = Disks::new_with_refreshed_list();
     let mut best_space = 0u64;
     let mut best_len = 0usize;
     for disk in &disks {
         let mount = disk.mount_point();
-        if check.starts_with(mount) && mount.as_os_str().len() > best_len {
+        if path.starts_with(mount) && mount.as_os_str().len() > best_len {
             best_len = mount.as_os_str().len();
             best_space = disk.available_space();
         }

@@ -1,36 +1,77 @@
-/// uv invocation scaffold — milestone 2 implementation.
-///
-/// uv is a Rust-native Python environment manager (~15 MB) bundled as a
-/// Tauri sidecar binary. It installs an isolated Python runtime and venv
-/// without requiring any system Python.
-use anyhow::{bail, Context};
+use anyhow::Context;
 
-pub fn run_uv(app: &tauri::AppHandle, args: &[&str]) -> anyhow::Result<std::process::Output> {
+/// Invoke uv with `args`, calling `on_line` for each line written to stderr.
+/// Blocks until uv exits; returns an error if the exit status is non-zero.
+pub fn run_uv_streaming<F>(
+    app: &tauri::AppHandle,
+    args: &[&str],
+    mut on_line: F,
+) -> anyhow::Result<()>
+where
+    F: FnMut(&str),
+{
+    use std::io::{BufRead, BufReader};
+
+    let binary = uv_binary(app)?;
+    let mut child = std::process::Command::new(&binary)
+        .args(args)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .with_context(|| format!("failed to spawn uv with args {:?}", args))?;
+
+    let mut stderr_lines: Vec<String> = Vec::new();
+    if let Some(stderr) = child.stderr.take() {
+        for line in BufReader::new(stderr).lines().flatten() {
+            on_line(&line);
+            stderr_lines.push(line);
+        }
+    }
+
+    let status = child.wait().context("failed to wait for uv")?;
+    if !status.success() {
+        anyhow::bail!(
+            "uv {:?} exited with status {:?}:\n{}",
+            args,
+            status.code(),
+            stderr_lines.join("\n").trim()
+        );
+    }
+    Ok(())
+}
+
+// In dev builds `resource_dir` resolves to `CARGO_MANIFEST_DIR` (src-tauri/),
+// which is where we keep the binary during development. In release builds the
+// sidecar lives next to the executable, so we walk up from `current_exe()`.
+fn uv_binary(app: &tauri::AppHandle) -> anyhow::Result<std::path::PathBuf> {
     use tauri::Manager;
 
-    let resource_dir = app
+    #[cfg(target_os = "windows")]
+    let name = format!("uv-{}.exe", target_triple());
+    #[cfg(not(target_os = "windows"))]
+    let name = format!("uv-{}", target_triple());
+
+    #[cfg(dev)]
+    let dir = app
         .path()
         .resource_dir()
         .context("could not resolve resource directory")?;
 
-    let triple = target_triple();
-    #[cfg(target_os = "windows")]
-    let binary_name = format!("uv-{}.exe", triple);
-    #[cfg(not(target_os = "windows"))]
-    let binary_name = format!("uv-{}", triple);
+    #[cfg(not(dev))]
+    let dir = {
+        let _ = app; // not needed outside dev
+        std::env::current_exe()
+            .context("could not get current executable path")?
+            .parent()
+            .context("executable has no parent directory")?
+            .to_path_buf()
+    };
 
-    let binary = resource_dir.join("binaries").join(&binary_name);
+    let binary = dir.join("binaries").join(&name);
     if !binary.exists() {
-        bail!(
-            "uv binary not found at {:?} — place it in src-tauri/binaries/ (see spec)",
-            binary
-        );
+        anyhow::bail!("uv binary not found at {:?}", binary);
     }
-
-    std::process::Command::new(&binary)
-        .args(args)
-        .output()
-        .with_context(|| format!("failed to run uv with args {:?}", args))
+    Ok(binary)
 }
 
 fn target_triple() -> &'static str {
@@ -49,4 +90,18 @@ fn target_triple() -> &'static str {
         all(target_os = "windows", target_arch = "x86_64"),
     )))]
     { "unknown" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn target_triple_is_known_platform() {
+        assert_ne!(
+            target_triple(),
+            "unknown",
+            "add a cfg branch for this build target"
+        );
+    }
 }

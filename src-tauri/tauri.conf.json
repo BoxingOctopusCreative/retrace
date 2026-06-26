@@ -39,7 +39,8 @@
       "binaries/uv"
     ],
     "resources": {
-      "resources/sidecar.py": "sidecar.py"
+      "resources/sidecar.py": "sidecar.py",
+      "resources/requirements.txt": "requirements.txt"
     }
   }
 }
