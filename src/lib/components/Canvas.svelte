@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { imagePath, svgOutput, isTracing, traceError } from "../stores/tracing";
 
   let currentPath: string | null = null;
@@ -128,6 +130,30 @@
     isPanning = false;
   }
 
+  // ── Drag-and-drop ────────────────────────────────────────────────────────
+  const RASTER_EXTS = new Set([".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".tif", ".webp"]);
+  const isRaster = (p: string) => RASTER_EXTS.has(p.toLowerCase().slice(p.lastIndexOf(".")));
+
+  let isDragOver = false;
+  let unlistenDrag: (() => void) | null = null;
+
+  onMount(async () => {
+    unlistenDrag = await getCurrentWebview().onDragDropEvent((e) => {
+      const p = e.payload;
+      if (p.type === "enter") {
+        isDragOver = p.paths.some(isRaster);
+      } else if (p.type === "drop") {
+        isDragOver = false;
+        const path = p.paths.find(isRaster);
+        if (path) { imagePath.set(path); svgOutput.set(null); }
+      } else if (p.type === "leave") {
+        isDragOver = false;
+      }
+    });
+  });
+
+  onDestroy(() => { unlistenDrag?.(); });
+
   $: zoomLabel = isFit ? "Fit" : `${Math.round(svgZoom * 100)}%`;
   $: svgImgStyle = isFit
     ? "max-width:100%;max-height:100%;object-fit:contain;"
@@ -136,6 +162,16 @@
 </script>
 
 <div class="canvas-area">
+  {#if isDragOver}
+    <div class="drop-overlay">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 4v12M7 9l5-5 5 5" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 17v2a1 1 0 001 1h14a1 1 0 001-1v-2" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="drop-label">Drop to open</span>
+    </div>
+  {/if}
+
   {#if !currentPath}
     <div class="empty">
       <div class="empty-icon">⬡</div>
@@ -218,6 +254,28 @@
     overflow: hidden;
     display: flex;
     background: var(--bg-1);
+    position: relative;
+  }
+
+  .drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    background: var(--accent-dim);
+    border: 2px solid var(--accent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .drop-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    user-select: none;
   }
 
   .empty {
