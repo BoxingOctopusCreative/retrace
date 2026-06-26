@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#252528"/>
+      <stop offset="100%" stop-color="#111113"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background: macOS Big Sur-style rounded square -->
+  <rect width="1024" height="1024" rx="225" ry="225" fill="url(#bg)"/>
+
+  <!-- Control handle dashed line (subtle) -->
+  <line x1="793" y1="793" x2="810" y2="215"
+        stroke="#7c6af7" stroke-width="20"
+        stroke-dasharray="40 36" opacity="0.30"
+        stroke-linecap="round"/>
+
+  <!-- Main bezier curve: bottom-left anchor → top-right anchor -->
+  <path d="M 215 810 C 280 490 490 280 810 215"
+        stroke="#7c6af7" stroke-width="88" fill="none"
+        stroke-linecap="round"/>
+
+  <!-- Anchor point 1: bottom-left (filled) -->
+  <circle cx="215" cy="810" r="68" fill="#7c6af7"/>
+
+  <!-- Anchor point 2: top-right (filled) -->
+  <circle cx="810" cy="215" r="68" fill="#7c6af7"/>
+
+  <!-- Control handle: bottom-right (hollow ring) -->
+  <circle cx="793" cy="793" r="43" stroke="#7c6af7" stroke-width="27" fill="none" opacity="0.55"/>
+</svg>

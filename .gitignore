@@ -19,6 +19,9 @@ __pycache__/
 sidecar/.venv/
 sidecar/venv/
 
+# ── uv binaries (download separately, not committed) ──────
+src-tauri/binaries/uv-*
+
 # ── OS ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
