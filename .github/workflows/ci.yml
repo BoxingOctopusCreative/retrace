@@ -105,7 +105,7 @@ jobs:
           $tmp = "$env:TEMP\uv"
           Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-${triple}.zip" -OutFile "$tmp.zip"
           Expand-Archive -Path "$tmp.zip" -DestinationPath $tmp
-          Copy-Item "$tmp\uv-${triple}\uv.exe" "src-tauri\binaries\uv-${triple}.exe"
+          Copy-Item "$tmp\uv.exe" "src-tauri\binaries\uv-${triple}.exe"
 
       - uses: tauri-apps/tauri-action@v0
         env:
