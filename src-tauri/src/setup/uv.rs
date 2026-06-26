@@ -53,11 +53,12 @@ fn uv_binary(app: &tauri::AppHandle) -> anyhow::Result<std::path::PathBuf> {
 
     #[cfg(dev)]
     let binary = {
-        let dir = app
-            .path()
-            .resource_dir()
-            .context("could not resolve resource directory")?;
-        dir.join("binaries").join(&name)
+        let _ = app;
+        // CARGO_MANIFEST_DIR is src-tauri/ at compile time — always correct
+        // regardless of where the dev binary runs from.
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("binaries")
+            .join(&name)
     };
 
     #[cfg(not(dev))]
