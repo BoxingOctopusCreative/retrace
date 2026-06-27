@@ -4,10 +4,7 @@ torch>=2.0.0
 torchvision>=0.15.0
 scipy>=1.10.0
 
-# LIVE backend (install separately — see LIVE documentation)
-# diffvg
-
-# StarVector backend
-# transformers>=4.38.0
+# StarVector backend (installed on demand via Settings → Enhanced Backends)
+# transformers>=4.35.0
 # accelerate>=0.27.0
-# einops>=0.7.0
+# huggingface_hub>=0.20.0

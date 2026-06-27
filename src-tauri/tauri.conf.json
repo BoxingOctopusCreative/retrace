@@ -48,7 +48,8 @@
     ],
     "resources": {
       "resources/sidecar.py": "sidecar.py",
-      "resources/requirements.txt": "requirements.txt"
+      "resources/requirements.txt": "requirements.txt",
+      "resources/download_model.py": "download_model.py"
     }
   }
 }

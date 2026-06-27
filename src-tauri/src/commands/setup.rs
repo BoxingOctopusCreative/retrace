@@ -129,23 +129,163 @@ pub async fn download_model(
             s.state = BackendState::Installing(0.0);
         }
     }
-    // Emit a placeholder progress event so the frontend pipeline can be tested
     let _ = app.emit(
         "install:progress",
         InstallProgress {
             stage: InstallStage::ModelWeights(backend.clone()),
             bytes_downloaded: 0,
-            total_bytes: 1,
+            total_bytes: 0,
         },
     );
+
+    let app_task = app.clone();
+    let backend_task = backend.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        download_model_blocking(&app_task, &backend_task)
+    })
+    .await
+    .map_err(|e| format!("download task panicked: {e}"))?;
+
     {
         let mut statuses = state.backend_statuses.lock().unwrap();
         if let Some(s) = statuses.iter_mut().find(|s| s.id == backend) {
-            s.state = BackendState::NotInstalled;
+            s.state = match &result {
+                Ok(_) => BackendState::Ready,
+                Err(_) => BackendState::NotInstalled,
+            };
         }
     }
-    // TODO: Implement actual model download (milestone 4)
-    Err("Model download not yet implemented — coming in milestone 4.".to_string())
+
+    result.map_err(|e| e.to_string())
+}
+
+fn download_model_blocking(app: &tauri::AppHandle, backend: &BackendId) -> anyhow::Result<()> {
+    use anyhow::Context;
+    use std::io::BufRead;
+    use tauri::Manager;
+
+    let env_dir = installer::python_env_dir(app);
+    let venv_dir = env_dir.join("venv");
+
+    if !venv_dir.exists() {
+        anyhow::bail!(
+            "Python environment not installed — set it up via Settings → Enhanced Backends first"
+        );
+    }
+
+    // LIVE is purely algorithmic; just create the marker directory.
+    if matches!(backend, BackendId::Live) {
+        std::fs::create_dir_all(env_dir.join("models").join("live"))
+            .context("failed to create LIVE model directory")?;
+        let _ = app.emit(
+            "install:progress",
+            InstallProgress {
+                stage: InstallStage::ModelWeights(backend.clone()),
+                bytes_downloaded: 1,
+                total_bytes: 1,
+            },
+        );
+        return Ok(());
+    }
+
+    let model_subdir = match backend {
+        BackendId::StarVector1B => "starvector-1b",
+        BackendId::StarVector8B => "starvector-8b",
+        BackendId::Live | BackendId::Vtracer => return Ok(()),
+    };
+    let model_dir = env_dir.join("models").join(model_subdir);
+    std::fs::create_dir_all(&model_dir).context("failed to create model directory")?;
+
+    // Step 1: install backend-specific pip packages (transformers pulls in huggingface_hub).
+    let venv_str = venv_dir
+        .to_str()
+        .context("venv path is not valid UTF-8")?
+        .to_owned();
+    uv::run_uv_streaming(
+        app,
+        &[
+            "pip",
+            "install",
+            "--python",
+            &venv_str,
+            "transformers>=4.35.0",
+            "accelerate>=0.27.0",
+            "huggingface_hub>=0.20.0",
+        ],
+        |_| {},
+    )?;
+
+    // Step 2: download weights via the bundled download_model.py script.
+    let download_script = app
+        .path()
+        .resource_dir()
+        .context("could not resolve resource directory")?
+        .join("download_model.py");
+
+    #[cfg(target_os = "windows")]
+    let python = venv_dir.join("Scripts").join("python.exe");
+    #[cfg(not(target_os = "windows"))]
+    let python = venv_dir.join("bin").join("python3");
+
+    let model_dir_str = model_dir
+        .to_str()
+        .context("model dir path is not valid UTF-8")?
+        .to_owned();
+
+    let mut child = std::process::Command::new(&python)
+        .arg(&download_script)
+        .arg("--backend")
+        .arg(model_subdir)
+        .arg("--model-dir")
+        .arg(&model_dir_str)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .context("failed to spawn download_model.py")?;
+
+    let stderr = child.stderr.take().expect("stderr was piped");
+    let app_clone = app.clone();
+    let backend_clone = backend.clone();
+
+    let stderr_thread = std::thread::spawn(move || {
+        let mut total_files: u64 = 0;
+        let mut lines = Vec::<String>::new();
+
+        for line in std::io::BufReader::new(stderr).lines().flatten() {
+            if let Some(rest) = line.strip_prefix("progress:start:") {
+                total_files = rest.parse().unwrap_or(1);
+                let _ = app_clone.emit(
+                    "install:progress",
+                    InstallProgress {
+                        stage: InstallStage::ModelWeights(backend_clone.clone()),
+                        bytes_downloaded: 0,
+                        total_bytes: total_files,
+                    },
+                );
+            } else if let Some(rest) = line.strip_prefix("progress:file:") {
+                let completed: u64 = rest.parse().unwrap_or(0);
+                let _ = app_clone.emit(
+                    "install:progress",
+                    InstallProgress {
+                        stage: InstallStage::ModelWeights(backend_clone.clone()),
+                        bytes_downloaded: completed,
+                        total_bytes: total_files.max(1),
+                    },
+                );
+            }
+            lines.push(line);
+        }
+        lines
+    });
+
+    let status = child.wait().context("failed to wait for download process")?;
+    let stderr_lines = stderr_thread.join().unwrap_or_default();
+
+    if !status.success() {
+        anyhow::bail!("model download failed:\n{}", stderr_lines.join("\n").trim());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

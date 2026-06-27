@@ -57,12 +57,17 @@ pub fn call_sidecar(
     )
     .context("failed to write temp input image")?;
 
+    // Tell the sidecar where locally downloaded model weights live so backends
+    // like StarVector can load from disk without hitting the HuggingFace hub.
+    let model_dir = env_dir.join("models").join(backend);
+
     let mut child = std::process::Command::new(&python)
         .arg(&sidecar_path)
         .arg("--backend")
         .arg(backend)
         .arg("--input")
         .arg(&input_path)
+        .env("RETRACE_MODEL_DIR", &model_dir)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()

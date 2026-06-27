@@ -1,7 +1,7 @@
 # Base ML environment — required for all enhanced backends (LIVE, StarVector).
 # Installed by uv into an isolated venv managed by Re:Trace.
-# Backend-specific deps (diffvg, transformers, etc.) are installed per-backend
-# when that backend is set up via Settings → Enhanced Backends.
+# Backend-specific deps (transformers, accelerate, etc.) are installed on-demand
+# by download_model when the user installs a specific backend.
 Pillow>=10.0.0
 torch>=2.0.0
 torchvision>=0.15.0
