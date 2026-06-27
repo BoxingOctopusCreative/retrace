@@ -40,39 +40,39 @@ where
     Ok(())
 }
 
-// In dev builds `resource_dir` resolves to `CARGO_MANIFEST_DIR` (src-tauri/),
-// which is where we keep the binary during development. In release builds the
-// sidecar lives next to the executable, so we walk up from `current_exe()`.
 fn uv_binary(app: &tauri::AppHandle) -> anyhow::Result<std::path::PathBuf> {
-    use tauri::Manager;
-
-    #[cfg(target_os = "windows")]
-    let name = format!("uv-{}.exe", target_triple());
-    #[cfg(not(target_os = "windows"))]
-    let name = format!("uv-{}", target_triple());
-
     #[cfg(dev)]
     let binary = {
         let _ = app;
-        // CARGO_MANIFEST_DIR is src-tauri/ at compile time — always correct
-        // regardless of where the dev binary runs from.
+        // Dev: binary lives in src-tauri/binaries/ with the triple suffix so
+        // Tauri can select the right platform binary during cargo tauri dev.
+        // CARGO_MANIFEST_DIR is baked in at compile time and always points to
+        // src-tauri/, regardless of where the dev process runs from.
+        #[cfg(target_os = "windows")]
+        let name = format!("uv-{}.exe", target_triple());
+        #[cfg(not(target_os = "windows"))]
+        let name = format!("uv-{}", target_triple());
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("binaries")
-            .join(&name)
+            .join(name)
     };
 
     #[cfg(not(dev))]
     let binary = {
-        let _ = app; // not needed outside dev
-        // In production Tauri places sidecars next to the executable,
-        // with no binaries/ subdirectory prefix.
+        let _ = app;
+        // Production: Tauri strips the triple suffix when it installs sidecars,
+        // so the installed file is just "uv" / "uv.exe" next to the executable.
         let dir = std::env::current_exe()
             .context("could not get current executable path")?
             .parent()
             .context("executable has no parent directory")?
             .to_path_buf();
-        dir.join(&name)
+        #[cfg(target_os = "windows")]
+        { dir.join("uv.exe") }
+        #[cfg(not(target_os = "windows"))]
+        { dir.join("uv") }
     };
+
     if !binary.exists() {
         anyhow::bail!("uv binary not found at {:?}", binary);
     }
