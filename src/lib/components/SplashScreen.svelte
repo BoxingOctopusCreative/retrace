@@ -51,7 +51,7 @@
 
     <div class="meta">
       <p class="meta-line">
-        Version 0.3.3 from <!-- svelte-ignore a11y-invalid-attribute -->
+        Version 0.3.4 from <!-- svelte-ignore a11y-invalid-attribute -->
         <a href="#" class="link" on:click|preventDefault={() => openUrl("https://boxingoctop.us")}>BOC Engineering</a>
       </p>
       <p class="meta-line">

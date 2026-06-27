@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { get, writable } from "svelte/store";
 import type { TraceOptions } from "../types";
 import { defaultTraceOptions } from "../types";
@@ -9,6 +10,17 @@ export const svgOutput = writable<string | null>(null);
 export const isTracing = writable(false);
 export const traceError = writable<string | null>(null);
 export const traceOptions = writable<TraceOptions>({ ...defaultTraceOptions });
+export const traceProgress = writable<string | null>(null);
+
+// Listen for per-line progress events from the sidecar (LIVE and future backends).
+listen<{ backend: string; message: string }>("trace:progress", ({ payload }) => {
+  traceProgress.set(payload.message);
+});
+
+// Clear progress when a trace run finishes.
+isTracing.subscribe((running) => {
+  if (!running) traceProgress.set(null);
+});
 
 let pendingTrace: { path: string; opts: TraceOptions } | null = null;
 

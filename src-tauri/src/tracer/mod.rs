@@ -37,4 +37,8 @@ pub struct VectorOutput {
 pub trait ImageTracer: Send + Sync {
     fn trace(&self, input: &RasterImage, opts: &TraceOptions) -> anyhow::Result<VectorOutput>;
     fn name(&self) -> &str;
+    /// Whether this backend is slow enough to warrant a progress indicator in the UI.
+    fn is_slow(&self) -> bool {
+        false
+    }
 }

@@ -13,4 +13,8 @@ impl ImageTracer for LiveBackend {
     fn name(&self) -> &str {
         "live"
     }
+
+    fn is_slow(&self) -> bool {
+        true
+    }
 }

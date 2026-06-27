@@ -1,7 +1,7 @@
 <script lang="ts">
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { invoke } from "@tauri-apps/api/core";
-  import { imagePath, svgOutput, traceOptions, runTrace } from "../stores/tracing";
+  import { imagePath, isTracing, svgOutput, traceOptions, traceProgress, runTrace } from "../stores/tracing";
   import { activeBackend, backendStatuses, setBackend } from "../stores/backends";
   import type { BackendId, BackendStatus } from "../types";
 
@@ -24,6 +24,21 @@
 
   let statuses: BackendStatus[] = [];
   let backend: BackendId = "vtracer";
+  let tracing = false;
+  let progress: string | null = null;
+
+  isTracing.subscribe((v) => (tracing = v));
+  traceProgress.subscribe((v) => (progress = v));
+
+  $: isSlowBackend = backend !== "vtracer";
+
+  function parseProgress(msg: string | null): string {
+    if (!msg) return "Tracing…";
+    if (msg === "progress:init") return "Analysing colours…";
+    const m = msg.match(/^progress:layer:(\d+)\/(\d+)$/);
+    if (m) return `Layer ${m[1]} of ${m[2]}…`;
+    return "Tracing…";
+  }
 
   svgOutput.subscribe((v) => (currentSvg = v));
   imagePath.subscribe((v) => (currentPath = v));
@@ -108,7 +123,16 @@
 
   <div class="actions">
     <button class="btn" on:click={openFile}>Open Image</button>
-    <button class="btn btn-primary" on:click={trace} disabled={!currentPath}>Trace</button>
+    <button class="btn btn-primary" on:click={trace} disabled={!currentPath || tracing}>
+      Trace
+      {#if isSlowBackend && !tracing}
+        <span class="slow-badge">slow</span>
+      {/if}
+    </button>
+
+    {#if tracing && isSlowBackend}
+      <span class="trace-status">{parseProgress(progress)}</span>
+    {/if}
 
     <div class="export-group" class:disabled={!currentSvg}>
       <button class="btn export-btn" on:click={exportAs} disabled={!currentSvg}>
@@ -252,8 +276,34 @@
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .btn-primary:hover:not(:disabled) { filter: brightness(1.1); background: var(--accent); }
+
+  .slow-badge {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+  }
+
+  .trace-status {
+    font-size: 12px;
+    color: var(--text-3);
+    white-space: nowrap;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
 
   /* Export split button */
   .export-group {
