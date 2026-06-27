@@ -169,6 +169,46 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
 
+      # tauri-action does not upload .sig files as separate release assets.
+      # We do it here so publish-release can assemble latest.json from them.
+      - name: Upload updater sig (macOS)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARCH=$(rustc -vV | grep host | awk '{print $2}' | cut -d- -f1)
+          SIG=$(find src-tauri/target/release/bundle/macos -name "*.app.tar.gz.sig" | head -1)
+          if [ -f "$SIG" ]; then
+            cp "$SIG" "/tmp/retrace_${ARCH}.app.tar.gz.sig"
+            gh release upload "${{ github.ref_name }}" "/tmp/retrace_${ARCH}.app.tar.gz.sig" --clobber
+          else
+            echo "WARNING: no .app.tar.gz.sig found — signing may not be configured"
+          fi
+
+      - name: Upload updater bundles + sigs (Linux)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Linux'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          for f in $(find src-tauri/target/release/bundle/appimage -name "*.AppImage.tar.gz*" 2>/dev/null); do
+            gh release upload "$TAG" "$f" --clobber
+          done
+
+      - name: Upload updater bundles + sigs (Windows)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $files = Get-ChildItem "src-tauri\target\release\bundle\nsis" -Filter "*.nsis.zip*" -ErrorAction SilentlyContinue
+          foreach ($f in $files) {
+            gh release upload $tag $f.FullName --clobber
+          }
+
   publish-release:
     name: Publish Release
     if: startsWith(github.ref, 'refs/tags/v')
