@@ -9,6 +9,12 @@ pub struct UpdateInfo {
 
 #[tauri::command]
 pub async fn check_for_update(app: tauri::AppHandle) -> Result<Option<UpdateInfo>, String> {
+    #[cfg(dev)]
+    {
+        let _ = app;
+        return Ok(None);
+    }
+
     let update = app
         .updater()
         .map_err(|e| e.to_string())?

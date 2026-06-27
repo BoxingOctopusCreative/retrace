@@ -156,10 +156,14 @@ jobs:
         shell: pwsh
         run: |
           $triple = (rustc -vV | Select-String 'host').ToString().Split()[1]
-          $tmp = "$env:TEMP\uv"
-          Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-${triple}.zip" -OutFile "$tmp.zip"
-          Expand-Archive -Path "$tmp.zip" -DestinationPath $tmp
-          Copy-Item "$tmp\uv.exe" "src-tauri\binaries\uv-${triple}.exe"
+          $extractDir = "$env:TEMP\uv-$triple"
+          New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
+          Invoke-WebRequest -Uri "https://github.com/astral-sh/uv/releases/latest/download/uv-${triple}.zip" -OutFile "$extractDir.zip"
+          Expand-Archive -Path "$extractDir.zip" -DestinationPath $extractDir -Force
+          # The zip extracts to a subdirectory named after the triple; find uv.exe recursively
+          $uvExe = (Get-ChildItem -Path $extractDir -Filter "uv.exe" -Recurse | Select-Object -First 1).FullName
+          if (-not $uvExe) { Write-Error "uv.exe not found after extraction"; exit 1 }
+          Copy-Item $uvExe "src-tauri\binaries\uv-${triple}.exe"
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -169,22 +173,32 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
 
-      # tauri-action does not upload .sig files as separate release assets.
-      # We do it here so publish-release can assemble latest.json from them.
-      - name: Upload updater sig (macOS)
+      # tauri-action's signing step is unreliable for the .app.tar.gz; sign it
+      # ourselves via the Tauri CLI, then upload all platform updater artefacts
+      # so publish-release can assemble latest.json from them.
+      - name: Sign and upload updater bundle (macOS)
         if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           ARCH=$(rustc -vV | grep host | awk '{print $2}' | cut -d- -f1)
-          SIG=$(find src-tauri/target/release/bundle/macos -name "*.app.tar.gz.sig" | head -1)
-          if [ -f "$SIG" ]; then
-            cp "$SIG" "/tmp/retrace_${ARCH}.app.tar.gz.sig"
-            gh release upload "${{ github.ref_name }}" "/tmp/retrace_${ARCH}.app.tar.gz.sig" --clobber
-          else
-            echo "WARNING: no .app.tar.gz.sig found — signing may not be configured"
-          fi
+          TAG="${{ github.ref_name }}"
+          BUNDLE=$(find src-tauri/target/release/bundle/macos -name "*.app.tar.gz" | head -1)
+          if [ -z "$BUNDLE" ]; then echo "No .app.tar.gz bundle found"; exit 1; fi
+
+          # Sign using the Tauri CLI (bypasses tauri-action's signing which fails silently).
+          # tauri signer sign outputs the minisign signature to stdout; redirect to .sig file.
+          ./node_modules/.bin/tauri signer sign \
+            --private-key "$TAURI_SIGNING_PRIVATE_KEY" \
+            --password "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" \
+            "$BUNDLE" > "${BUNDLE}.sig"
+
+          if [ ! -s "${BUNDLE}.sig" ]; then echo "Signing failed — .sig file is empty"; exit 1; fi
+          cp "${BUNDLE}.sig" "/tmp/retrace_${ARCH}.app.tar.gz.sig"
+          gh release upload "$TAG" "/tmp/retrace_${ARCH}.app.tar.gz.sig" --clobber
 
       - name: Upload updater bundles + sigs (Linux)
         if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Linux'
@@ -204,9 +218,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = "${{ github.ref_name }}"
-          $files = Get-ChildItem "src-tauri\target\release\bundle\nsis" -Filter "*.nsis.zip*" -ErrorAction SilentlyContinue
-          foreach ($f in $files) {
-            gh release upload $tag $f.FullName --clobber
+          $dir = "src-tauri\target\release\bundle\nsis"
+          # Use separate patterns — the wildcard *.nsis.zip* is unreliable in pwsh -Filter
+          foreach ($pattern in @("*.nsis.zip", "*.nsis.zip.sig")) {
+            $file = Get-ChildItem $dir -Filter $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($file) { gh release upload $tag $file.FullName --clobber }
           }
 
   publish-release:
