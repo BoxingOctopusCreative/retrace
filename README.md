@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src-tauri/icons/icon.svg" width="120" alt="Re:Trace" />
+</p>
+
 # Re:Trace
 
 **Turn any photo or illustration into clean, scalable vector art — on your device, in seconds.**
