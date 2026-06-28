@@ -6,7 +6,7 @@
 
 **Turn any photo or illustration into clean, scalable vector art. On your device, in seconds.**
 
-Re:Trace is a free, open-source desktop app for macOS and Windows that converts raster images (JPG, PNG, etc.) into SVG vector files. No subscription. No cloud upload. No watermarks. Your files never leave your machine.
+Re:Trace is a free, open-source desktop app for macOS, Windows, and Linux that converts raster images (JPG, PNG, etc.) into SVG vector files. No subscription. No cloud upload. No watermarks. Your files never leave your machine.
 
 ---
 
